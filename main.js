@@ -344,6 +344,55 @@ window.addEventListener("mousemove", (e) => {
   mouseRaw.y = e.clientY;
 });
 
+// Touch handling for mobile
+let isTouching = false;
+let touchStartPos = { x: 0, y: 0 };
+let hasMovedEnough = false;
+
+window.addEventListener("touchstart", (e) => {
+  isTouching = true;
+  hasMovedEnough = false;
+  touchStartPos.x = e.touches[0].clientX;
+  touchStartPos.y = e.touches[0].clientY;
+  lastMoveT = performance.now();
+  // Prevent emulation of mouse events and scrolling
+  e.preventDefault();
+}, { passive: false });
+
+window.addEventListener("touchmove", (e) => {
+  if (!isTouching) return;
+  const touch = e.touches[0];
+  
+  if (!hasMovedEnough) {
+    const dx = touch.clientX - touchStartPos.x;
+    const dy = touch.clientY - touchStartPos.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist > 10) { // 10px threshold
+      hasMovedEnough = true;
+      mouseRaw.x = touch.clientX;
+      mouseRaw.y = touch.clientY;
+      lastMoveT = performance.now();
+    }
+    return;
+  }
+  
+  const now = performance.now();
+  const dt = Math.max(1, now - lastMoveT);
+  const dx = touch.clientX - mouseRaw.x;
+  const dy = touch.clientY - mouseRaw.y;
+  const inst = Math.sqrt(dx * dx + dy * dy) / dt;
+  mouseSpeed = mouseSpeed * 0.8 + inst * 0.2;
+  lastMoveT = now;
+  mouseRaw.x = touch.clientX;
+  mouseRaw.y = touch.clientY;
+  
+  e.preventDefault();
+}, { passive: false });
+
+window.addEventListener("touchend", () => {
+  isTouching = false;
+});
+
 const mouseNDC = new THREE.Vector2();
 const trackingPlane = new THREE.Plane(new THREE.Vector3(0, 0, -1), 2.2);
 const raycaster = new THREE.Raycaster();
